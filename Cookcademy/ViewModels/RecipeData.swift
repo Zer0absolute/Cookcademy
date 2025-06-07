@@ -6,3 +6,8 @@
 //
 
 import Foundation
+
+@Observable
+class RecipeData {
+  var recipes = Recipe.testRecipes
+}
