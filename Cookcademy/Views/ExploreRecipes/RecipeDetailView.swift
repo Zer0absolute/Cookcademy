@@ -7,11 +7,26 @@
 
 import SwiftUI
 
+private struct RecipeDataKey: EnvironmentKey {
+    static let defaultValue = RecipeData()
+}
+
+extension EnvironmentValues {
+    var recipeData: RecipeData {
+        get { self[RecipeDataKey.self] }
+        set { self[RecipeDataKey.self] = newValue }
+    }
+}
+
 struct RecipeDetailView: View {
-    let recipe: Recipe
+  @Binding var recipe: Recipe
+  @State private var isPresenting = false
+  @Environment(\.recipeData) var recipeData: RecipeData
+
     
-    private let listBackgroundColor = AppColor.background
-    private let listTextColor = AppColor.foreground
+    @AppStorage("hideOptionalSteps") private var hideOptionalSteps: Bool = false
+    @AppStorage("listBackgroundColor") private var listBackgroundColor = AppColor.background
+    @AppStorage("listTextColor") private var listTextColor = AppColor.foreground
     
     var body: some View {
         VStack {
@@ -40,24 +55,60 @@ struct RecipeDetailView: View {
                 
                 Section(header: Text("Directions")) {
                     ForEach(recipe.directions.indices, id: \.self) { index in
-                        let directions = recipe.directions[index]
+                        let direction = recipe.directions[index]
+                      if direction.isOptional && hideOptionalSteps {
+                        EmptyView()
+                      } else {
                         HStack {
-                            Text("\(index + 1).").bold().padding(.trailing)
-                            Text("\(directions.isOptional ? "(Optional) " : "")" + "\(directions.description)")
+                          let index = recipe.index(of: direction, excludingOptionalDirections: hideOptionalSteps) ?? 0
+                              Text("\(index + 1). ").bold()
+                              Text("\(direction.isOptional ? "(Optional) " : "")\(direction.description)")
                         }.foregroundColor(listTextColor)
+                      }
                     }.padding()
                 }.listRowBackground(listBackgroundColor)
             }
         }
         .navigationTitle(recipe.mainInformation.name)
+        .toolbar {
+          ToolbarItem {
+            HStack {
+              Button("Edit") {
+                isPresenting = true
+              }
+              Button(action: { recipe.isFavorite.toggle()}) {
+                Image(systemName: recipe.isFavorite ? "heart.fill" : "heart")
+              }
+            }
+          }
+        }
+        .sheet(isPresented: $isPresenting) {
+          NavigationStack {
+            ModifyRecipeView(recipe: $recipe)
+              .toolbar {
+                ToolbarItem(placement: .confirmationAction) {
+                  Button("Save") {
+                    isPresenting = false
+                  }
+                }
+              }
+              .navigationTitle("Edit Recipe")
+          }
+          .onDisappear {
+            recipeData.saveRecipes()
+          }
+        }
     }
 }
 
+// 3. Injecte dans le preview
 struct RecipeDetailView_Previews: PreviewProvider {
-  @State static var recipe = Recipe.testRecipes[0]
-  static var previews: some View {
-    NavigationView {
-      RecipeDetailView(recipe: recipe)
+    @State static var recipe = Recipe.testRecipes[0]
+    static var previews: some View {
+        NavigationView {
+            RecipeDetailView(recipe: $recipe)
+                .environment(\.recipeData, RecipeData())
+        }
     }
-  }
 }
+

@@ -22,12 +22,12 @@ struct ModifyRecipeView: View {
             .padding()
             
             switch selection {
-            case .main:
-                ModifyMainInformationView(mainInformation: $recipe.mainInformation)
-            case .ingredients:
-                ModifyIngredientsView(ingredients: $recipe.ingredients)
-            case .directions:
-                Text("Directions")
+                case .main:
+                    ModifyMainInformationView(mainInformation: $recipe.mainInformation)
+                case .ingredients:
+                    ModifyComponentsView<Ingredient, ModifyIngredientView>(components: $recipe.ingredients)
+                case .directions:
+                    ModifyComponentsView<Direction, ModifyDirectionView>(components: $recipe.directions)
             }
             Spacer()
         }
